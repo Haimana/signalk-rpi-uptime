@@ -1,0 +1,31 @@
+{
+  "name": "signalk-rpi-uptime",
+  "version": "0.0.1",
+  "description": "SignalK plugin to provide RPi's uptime",
+  "homepage": "https://github.com/Haimana/signalk-rpi-uptime",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "signalk-node-server-plugin",
+    "signalk-category-hardware"
+  ],
+  "signalk-plugin-enabled-by-default": true,
+  "author": {
+    "name": "SeB",
+    "email": "sebba@end.ro"
+  },  
+  "bugs": {
+    "url": "https://github.com/Haimana/signalk-rpi-uptime/issues"
+  },
+  "license": "Apache-2.0",
+  "dependencies": {
+    "lodash": "^4.17.21"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Haimana/signalk-rpi-uptime.git"
+  }
+}
+

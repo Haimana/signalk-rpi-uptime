@@ -40,7 +40,6 @@ const spawn = require('child_process').spawn
 
 const command = 'cat /proc/uptime'
 
-
 module.exports = function(app) {
   var plugin = {};
   var timer
@@ -50,12 +49,17 @@ module.exports = function(app) {
   plugin.description = "SignalK Node Server Plugin to provide Raspberry Pi Uptime"
   plugin.schema = {
     type: "object",
-    description: "RPi Uptime in seconds",
+    description: "RPi Uptime",
     properties: {
-      path: {
-        title: "SignalK Path",
+      path_seconds: {
+        title: "SignalK Path (seconds)",
         type: "string",
         default: "environment.rpi.uptime",
+      },
+      path_pretty: {
+        title: "SignalK Path (pretty)",
+        type: "string",
+        default: "environment.rpi.uptimepretty",
       },
       rate: {
         title: "Sample Rate (in seconds)",
@@ -72,7 +76,7 @@ module.exports = function(app) {
         updates: [{
             meta: [
                 {
-                    path: options.path,
+                    path: options.path_seconds,
                     value: {
                         units: "s"
                     }
@@ -82,40 +86,52 @@ module.exports = function(app) {
     });
 	
 	
-    function readUptime() {
-    var process = spawn('sh', ['-c', command ])
+    function readUptimeSec() {
+    var seconds = spawn('sh', ['-c', command ])
 
-    process.stdout.on('data', (data) => {
+      seconds.stdout.on('data', (data) => {
+          app.debug(`Output of "${command}":  ${data}`)
+          var uptimeseconds = data.toString().split('.')[0];
+          app.debug(`Processed string:  ${uptimeseconds}`)
+          app.handleMessage(plugin.id, {
+              updates: [
+                {
+                  values: [ 
+                  {
+                    path: options.path_seconds,
+                    value: parseInt(uptimeseconds)
+                  },
+                  {
+                    path: options.path_pretty,
+                    value: secondsToDhms(uptimeseconds)
+                  }
+                ]
+                }
+              ]
+            })
+          }
+        )
 
-        app.debug(`Output of "${command}":  ${data}`)
-
-	      var uptimeseconds = data.toString().split('.')[0];
-	
-        app.debug(`Processed string:  ${uptimeseconds}`)
-	
-        app.handleMessage(plugin.id, {
-            updates: [
-              {
-                values: [ {
-                  path: options.path,
-                  value: parseInt(uptimeseconds)
-                }]
-              }
-            ]
-          })
-        }
-      )
-
-      process.on('error', (error) => {
-        console.error(error.toString())
-      })
-
-      process.stderr.on('data', function (data) {
-        console.error(data.toString())
-      })
+      seconds.on('error', (error) => { console.error(error.toString()) })
+      seconds.stderr.on('data', function (data) { console.error(data.toString()) })
     }
-    readUptime()
-    setInterval(readUptime, options.rate * 1000)
+
+    function secondsToDhms(seconds) {
+      seconds = Number(seconds);
+      var d = Math.floor(seconds / (3600*24));
+      var h = Math.floor(seconds % (3600*24) / 3600);
+      var m = Math.floor(seconds % 3600 / 60);
+      var s = Math.floor(seconds % 60);
+      
+      var dDisplay = d > 0 ? d + (d == 1 ? " day, " : " days, ") : "";
+      var hDisplay = h > 0 ? h + (h == 1 ? " hour, " : " hours, ") : "";
+      var mDisplay = m > 0 ? m + (m == 1 ? " minute, " : " minutes, ") : "";
+      var sDisplay = s > 0 ? s + (s == 1 ? " second" : " seconds") : "";
+      return dDisplay + hDisplay + mDisplay + sDisplay;
+      }
+
+    readUptimeSec()
+    setInterval(readUptimeSec, options.rate * 1000)
   }
 
   plugin.stop = function() {

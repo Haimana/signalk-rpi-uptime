@@ -17,7 +17,7 @@
     "email": "sebba@end.ro"
   },  
   "bugs": {
-    "url": "https://github.com/Haimana/signalk-rpi-uptime/issues"
+    "url": "https://github.com/haimana/signalk-rpi-uptime/issues"
   },
   "license": "Apache-2.0",
   "dependencies": {

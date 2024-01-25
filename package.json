@@ -1,6 +1,6 @@
 {
   "name": "signalk-rpi-uptime",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "SignalK plugin to provide RPi's uptime",
   "homepage": "https://github.com/Haimana/signalk-rpi-uptime",
   "main": "index.js",

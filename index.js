@@ -34,14 +34,13 @@ const command = 'cat /proc/uptime'
 
 module.exports = function(app) {
   var plugin = {};
-  var timer
+  let timer = null
 
   plugin.id = "signalk-rpi-uptime"
   plugin.name = "RPi Uptime"
   plugin.description = "SignalK Node Server Plugin to provide Raspberry Pi Uptime"
   plugin.schema = {
     type: "object",
-    // description: "RPi Uptime",
     properties: {
       path_seconds: {
         title: "SignalK Path (seconds)",
@@ -50,7 +49,7 @@ module.exports = function(app) {
       },
       prettyenable: {
         type: 'boolean',
-        title: 'Enable pretty report (restart SK if changed)',
+        title: 'Enable pretty report',
         default: false
       },      
       path_pretty: {
@@ -76,43 +75,20 @@ module.exports = function(app) {
                     value: {
                         units: "s"
                     }
-                },
+                }
             ]
         }]
     });
 	
-    function printUptimeSec() {
+    function printUptime() {
       var seconds = spawn('sh', ['-c', command ])
       seconds.stdout.on('data', (data) => {
           app.debug(`Output of "${command}":  ${data}`)
           var uptimeseconds = data.toString().split('.')[0];
           app.debug(`Processed string:  ${uptimeseconds}`)
-            app.debug(`Pretty disabled`)
-            app.handleMessage(plugin.id, {
-              updates: [
-                  {
-                    values: [ 
-                      {
-                        path: options.path_seconds,
-                        value: parseInt(uptimeseconds)
-                      }
-                    ]
-                  }
-                ]
-            })
-        })
+          app.debug(`Pretty enabled: ${options.prettyenable}`)
 
-      seconds.on('error', (error) => { console.error(error.toString()) })
-      seconds.stderr.on('data', function (data) { console.error(data.toString()) })
-    }
-    
-    function printUptimePretty() {
-      var seconds = spawn('sh', ['-c', command ])
-      seconds.stdout.on('data', (data) => {
-          app.debug(`Output of "${command}":  ${data}`)
-          var uptimeseconds = data.toString().split('.')[0];
-          app.debug(`Processed string:  ${uptimeseconds}`)
-            app.debug(`Pretty enabled`)
+          if (options.prettyenable) {
             app.handleMessage(plugin.id, {
               updates: [
                   {
@@ -129,16 +105,27 @@ module.exports = function(app) {
                   }
                 ]
             })
+          } else {
+            app.handleMessage(plugin.id, {
+              updates: [
+                  {
+                    values: [ 
+                      {
+                        path: options.path_seconds,
+                        value: parseInt(uptimeseconds)
+                      }
+                    ]
+                  }
+                ]
+            })
+          }
          })
 
       seconds.on('error', (error) => { console.error(error.toString()) })
       seconds.stderr.on('data', function (data) { console.error(data.toString()) })
     }
 
-
-    if (!options.prettyenable) setInterval(printUptimeSec, options.rate * 1000) 
-    if (options.prettyenable) setInterval(printUptimePretty, options.rate * 1000)
-
+    timer=setInterval(printUptime, options.rate * 1000)
   }
   
 

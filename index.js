@@ -1,20 +1,13 @@
 /*
- *  
  * Copyright 2024 SeB (sebba@end.ro) - S/V Haimana 264900475
  * 
  * Plugin page:
  * 
- * https://github.com/Haimana/signalk-rpi-uptime
- * 
- * 
- * ---------------------------------------------------------------------
+ * https://github.com/haimana/signalk-rpi-uptime
  * 
  * This plugin has been inspired and based on:
- * 
  * https://github.com/sbender9/signalk-raspberry-pi-temperature
- * 
  * and
- * 
  * https://github.com/sberl/signalk-rpi-monitor
  * 
  * Many thanks to the authors: Scott Bender and Steve Berl
@@ -37,7 +30,6 @@
 
 const _ = require('lodash')
 const spawn = require('child_process').spawn
-
 const command = 'cat /proc/uptime'
 
 module.exports = function(app) {
@@ -49,13 +41,18 @@ module.exports = function(app) {
   plugin.description = "SignalK Node Server Plugin to provide Raspberry Pi Uptime"
   plugin.schema = {
     type: "object",
-    description: "RPi Uptime",
+    // description: "RPi Uptime",
     properties: {
       path_seconds: {
         title: "SignalK Path (seconds)",
         type: "string",
         default: "environment.rpi.uptime",
       },
+      prettyenable: {
+        type: 'boolean',
+        title: 'Enable pretty report (restart SK if changed)',
+        default: false
+      },      
       path_pretty: {
         title: "SignalK Path (pretty)",
         type: "string",
@@ -68,7 +65,6 @@ module.exports = function(app) {
       }
      }
   }
-
 
   plugin.start = function(options) {
 
@@ -85,54 +81,66 @@ module.exports = function(app) {
         }]
     });
 	
-	
-    function readUptimeSec() {
-    var seconds = spawn('sh', ['-c', command ])
-
+    function printUptimeSec() {
+      var seconds = spawn('sh', ['-c', command ])
       seconds.stdout.on('data', (data) => {
           app.debug(`Output of "${command}":  ${data}`)
           var uptimeseconds = data.toString().split('.')[0];
           app.debug(`Processed string:  ${uptimeseconds}`)
-          app.handleMessage(plugin.id, {
+            app.debug(`Pretty disabled`)
+            app.handleMessage(plugin.id, {
               updates: [
-                {
-                  values: [ 
                   {
-                    path: options.path_seconds,
-                    value: parseInt(uptimeseconds)
-                  },
-                  {
-                    path: options.path_pretty,
-                    value: secondsToDhms(uptimeseconds)
+                    values: [ 
+                      {
+                        path: options.path_seconds,
+                        value: parseInt(uptimeseconds)
+                      }
+                    ]
                   }
                 ]
-                }
-              ]
             })
-          }
-        )
+        })
+
+      seconds.on('error', (error) => { console.error(error.toString()) })
+      seconds.stderr.on('data', function (data) { console.error(data.toString()) })
+    }
+    
+    function printUptimePretty() {
+      var seconds = spawn('sh', ['-c', command ])
+      seconds.stdout.on('data', (data) => {
+          app.debug(`Output of "${command}":  ${data}`)
+          var uptimeseconds = data.toString().split('.')[0];
+          app.debug(`Processed string:  ${uptimeseconds}`)
+            app.debug(`Pretty enabled`)
+            app.handleMessage(plugin.id, {
+              updates: [
+                  {
+                    values: [ 
+                      {
+                        path: options.path_seconds,
+                        value: parseInt(uptimeseconds)
+                      },
+                      { 
+                        path: options.path_pretty,
+                        value: secondsToDhms(uptimeseconds)
+                      }
+                    ]
+                  }
+                ]
+            })
+         })
 
       seconds.on('error', (error) => { console.error(error.toString()) })
       seconds.stderr.on('data', function (data) { console.error(data.toString()) })
     }
 
-    function secondsToDhms(seconds) {
-      seconds = Number(seconds);
-      var d = Math.floor(seconds / (3600*24));
-      var h = Math.floor(seconds % (3600*24) / 3600);
-      var m = Math.floor(seconds % 3600 / 60);
-      var s = Math.floor(seconds % 60);
-      
-      var dDisplay = d > 0 ? d + (d == 1 ? " day, " : " days, ") : "";
-      var hDisplay = h > 0 ? h + (h == 1 ? " hour, " : " hours, ") : "";
-      var mDisplay = m > 0 ? m + (m == 1 ? " minute, " : " minutes, ") : "";
-      var sDisplay = s > 0 ? s + (s == 1 ? " second" : " seconds") : "";
-      return dDisplay + hDisplay + mDisplay + sDisplay;
-      }
 
-    readUptimeSec()
-    setInterval(readUptimeSec, options.rate * 1000)
+    if (!options.prettyenable) setInterval(printUptimeSec, options.rate * 1000) 
+    if (options.prettyenable) setInterval(printUptimePretty, options.rate * 1000)
+
   }
+  
 
   plugin.stop = function() {
     if ( timer ) {
@@ -143,4 +151,21 @@ module.exports = function(app) {
 
   return plugin
 }
+
+
+//additional functions
+
+function secondsToDhms(seconds) {
+  seconds = Number(seconds);
+  var d = Math.floor(seconds / (3600*24));
+  var h = Math.floor(seconds % (3600*24) / 3600);
+  var m = Math.floor(seconds % 3600 / 60);
+  var s = Math.floor(seconds % 60);
+  
+  var dDisplay = d > 0 ? d + (d == 1 ? " day, " : " days, ") : "";
+  var hDisplay = h > 0 ? h + (h == 1 ? " hour, " : " hours, ") : "";
+  var mDisplay = m > 0 ? m + (m == 1 ? " minute, " : " minutes, ") : "";
+  var sDisplay = s > 0 ? s + (s == 1 ? " second" : " seconds") : "";
+  return dDisplay + hDisplay + mDisplay + sDisplay;
+  }
 
